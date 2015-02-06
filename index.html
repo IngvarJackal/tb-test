@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ua">
+<meta charset="UTF-8">
+    <head></head>
+    <body>
+        <h3> Тест на необхідність відвідування лікаря при підозрі на туберкульоз</h3>
+        <p>Для успішної діагностики потрібно відповісти на всі питання.</p>
+                
+        <script>
+            
+            var ANSWER_STRING = "Результат:";
+            var ADDITIONAL_QUESTIONS_STRING = "Дайте відповідь на додаткові питання (відзначте якщо відповідь позитивна):";
+            
+            var UNKNOWN_HIV_RESULT = "Пройдіть тест на ВІЛ.";
+            var TB_POSITIVE_RESULT = "Вам необхідно обстежитись на туберкульоз негайно.";
+            var TB_NEGATIVE_RESULT = "Вам необхідно обстежитись на туберкульоз протягом року.";
+            var NO_ANSWER_RESULT = "Ви не відповіли на всi питання.";
+            
+            var HIV_RADIOQUESTION = {
+                text:"Чи є у Вас ВІЛ?",
+                value: [0, 50, 99],
+                questions: ["Нi", "Не знаю", "Так"],
+                id:"hiv"
+            };
+            var COUGH_RADIOQUESTION = {
+                text:"Чи є у Вас кашель або покашлювання більше 2-х тижнів?",
+                value: [0,100],
+                questions: ["Нi", "Так"],
+                id:"cough"
+            };
+            var TIRED_CHECKBOXQUESTION = {
+                text:"Чи помітили Ви останнім часом підвищену втомлюваність та слабкість?",
+                value:[0,1],
+                id:"tired"
+            };
+            var SWEAT_CHECKBOXQUESTION = {
+                text:"Чи є у Вас підвищена пітливість, особливо вночі?",
+                value:[0,1],
+                id:"sweat"
+            };
+            var WEIGHT_CHECKBOXQUESTION = {
+                text:"Чи зменшилась вага Вашого тіла з невизначених причин?",
+                value:[0,1],
+                id:"weight"
+            };
+            var TEMP_CHECKBOXQUESTION = {
+                text:"Чи є у Вас протягом останнього часу підвищення температури тіла, має значення навіть незначне підвищення – до 37–37,2°?",
+                value:[0,1],
+                id:"temp"
+            };
+            var DYSPNEA_CHECKBOXQUESTION = {
+                text:"Чи є у Вас задишка при незначному фізичному навантаженні?",
+                value:[0,1],
+                id:"dyspnea"
+            };
+            var PAIN_CHECKBOXQUESTION = {
+                text:"Чи турбує Вас іноді біль в грудній  клітці?",
+                value:[0,1],
+                id:"pain"
+            };
+            var CONTACT_CHECKBOXQUESTION = {
+                text:"Чи мали Ви контакт із хворим на туберкульоз протягом останніх 6-ти місяців?",
+                value:[0,1],
+                id:"contact"
+            };
+            var IMMUN_CHECKBOXQUESTION = {
+                text:"Чи маєте Ви хронічне захворювання шлунково-кишкового тракту, діабет або інше захворювання, що призводить до зниження імунітету?",
+                value:[0,1],
+                id:"immun"
+            };
+            var STRESS_CHECKBOXQUESTION = {
+                text:"Чи мали Ви протягом останніх 3-х місяців серйозний стрес (смерть близької людини, розлучення, втрата роботи, тощо)?",
+                value:[0,1],
+                id:"stress"
+            };
+            var DRUGS_CHECKBOXQUESTION = {
+                text:"Чи приймаєте будь-які препарати, що можуть знижувати ваш імунітет (такі як преднізолон, хіміотерапія проти ракових захворювань тощо)?",
+                value:[0,1],
+                id:"drugs"
+            };            
+            
+            var IMPORTANT_QUESTIONS = [HIV_RADIOQUESTION, COUGH_RADIOQUESTION];
+            var ADDITIONAL_QUESTIONS = [TIRED_CHECKBOXQUESTION, SWEAT_CHECKBOXQUESTION, WEIGHT_CHECKBOXQUESTION, TEMP_CHECKBOXQUESTION, DYSPNEA_CHECKBOXQUESTION, PAIN_CHECKBOXQUESTION, CONTACT_CHECKBOXQUESTION, IMMUN_CHECKBOXQUESTION, STRESS_CHECKBOXQUESTION, DRUGS_CHECKBOXQUESTION];
+            var SHOWED_QUESTIONS = [];
+            
+            var THRESHOLD = 100;
+            var NO_CHECKED = -10000000;
+            var IS_EXTENDED = false;
+            var IS_ANSWERED = false;
+            
+            function placeParagraph(place, text) {
+                t = document.createElement("p");
+                t.appendChild(document.createTextNode(text));
+                place.appendChild(t);
+            }
+            
+            function placeRadiobutton(id, question, variants, place) {
+                var button = {
+                    id:id,
+                    variants:[],
+                    getResults:function() {
+                            for (var i = 0; i < variants.length; i++) {
+                                if(document.getElementById(id.concat(i.toString())).checked) {
+                                    return i;
+                                }
+                            }
+                            return NO_CHECKED;
+                        }
+                    };
+                
+                placeParagraph(place, question);
+                
+                for (var i = 0; i < variants.length; i++) {
+                    var input = document.createElement("input");
+                    input.type = "radio";
+                    input.name = id;
+                    input.id = id.concat(i.toString());
+                    place.appendChild(input);
+                    button.variants[i] = input;
+                
+                    place.appendChild(document.createTextNode(variants[i]));
+                }
+                
+                return button;
+            }
+            
+            function placeCheckbutton(id, question, place) {
+                var button = {
+                    id:id,
+                    getResults:function() {
+                            if(document.getElementById(id).checked) {
+                                return 1;
+                            } else {
+                                return 0;
+                            }
+                        }
+                    };
+                
+                place.appendChild(document.createTextNode(question));
+                            
+                var input = document.createElement("input");
+                input.type = "checkbox";
+                input.name = id;
+                input.id = id;
+                place.appendChild(input);
+                
+                place.appendChild(document.createElement("br"));
+                
+                return button;
+            }
+            
+            function countValues(questions) {
+                var sum = 0;
+                for (var i = 0; i < questions.length; i++) {
+                    var index = questions[i].button.getResults();
+                    if (index == NO_CHECKED) {
+                        sum += NO_CHECKED
+                    } else {
+                        sum += questions[i].question.value[index];
+                    }
+                    
+                }
+                return sum;
+            }
+            
+            function showResult(res) {
+                if (!IS_ANSWERED) {
+                    document.getElementById("answerheader").appendChild(document.createTextNode(ANSWER_STRING));
+                    document.getElementById("answer").appendChild(document.createTextNode(res));
+                    IS_ANSWERED = true;
+                } else {
+                    var answer = document.getElementById("answer");
+                    if (answer.childNodes.length > 0) {
+                        answer.replaceChild(document.createTextNode(res), answer.childNodes[0]);
+                    } else {
+                        answer.appendChild(document.createTextNode(res));
+                    }
+                }
+            }
+            
+            function addQuestions() {
+                placeParagraph(additionalForm, ADDITIONAL_QUESTIONS_STRING);
+                var answer = document.getElementById("answer");
+                if (answer.childNodes.length > 0) {
+                    answer.removeChild(answer.childNodes[0]);
+                }
+                var answerheader = document.getElementById("answerheader");
+                if (answerheader.childNodes.length > 0) {
+                    answerheader.removeChild(answerheader.childNodes[0]);
+                }
+                for (var i = 0; i < ADDITIONAL_QUESTIONS.length; i++) {
+                    SHOWED_QUESTIONS.push({
+                        button:placeCheckbutton(ADDITIONAL_QUESTIONS[i].id, ADDITIONAL_QUESTIONS[i].text, additionalForm),
+                        question:ADDITIONAL_QUESTIONS[i]
+                        });
+                }
+            }
+            
+            function evaluateResponse() {
+                var total = countValues(SHOWED_QUESTIONS);
+                console.log(total);
+                if (total < 0) {
+                    showResult(NO_ANSWER_RESULT);
+                } else {
+                    if (total == 50) {
+                        showResult(UNKNOWN_HIV_RESULT);
+                    } else if (total == 99 && !IS_EXTENDED){
+                        addQuestions();
+                        IS_EXTENDED = true;
+                    } else if (total < 100) {
+                        showResult(TB_NEGATIVE_RESULT);
+                    } else if (total >= 100) {
+                        showResult(TB_POSITIVE_RESULT);
+                    }
+                }
+                    
+            }
+            
+            var mainForm = document.createElement("form");
+            document.getElementsByTagName('body')[0].appendChild(mainForm);
+            var additionalForm = document.createElement("form");
+            document.getElementsByTagName('body')[0].appendChild(additionalForm);
+            
+            for (var i = 0; i < IMPORTANT_QUESTIONS.length; i++) {
+                SHOWED_QUESTIONS.push({
+                    button:placeRadiobutton(IMPORTANT_QUESTIONS[i].id, IMPORTANT_QUESTIONS[i].text, IMPORTANT_QUESTIONS[i].questions, mainForm),
+                    question:IMPORTANT_QUESTIONS[i]
+                    });
+            }
+
+        </script>
+        <br>
+        <button onclick="evaluateResponse()">Отримати результати</button>
+        <h3 id="answerheader"></h3>
+        <p id="answer"></p>
+    <body>
+</html>
