@@ -105,6 +105,11 @@
                                 }
                             }
                             return NO_CHECKED;
+                        },
+                    disableAll:function() {
+                        for (var i = 0; i < variants.length; i++) {
+                                document.getElementById(id.concat(i.toString())).disabled = true;
+                            }
                         }
                     };
                 
@@ -179,6 +184,10 @@
             }
             
             function addQuestions() {
+                for (var i = 0; i < SHOWED_QUESTIONS.length; i++) {
+                    SHOWED_QUESTIONS[i].button.disableAll();
+                }
+                
                 placeParagraph(additionalForm, ADDITIONAL_QUESTIONS_STRING);
                 var answer = document.getElementById("answer");
                 if (answer.childNodes.length > 0) {
